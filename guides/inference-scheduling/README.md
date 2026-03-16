@@ -70,6 +70,16 @@ helmfile apply -e cpu -n ${NAMESPACE}
 
 **_NOTE:_** By default, this guide creates 8 vLLM pods. For development and testing, the number can be reduced by updating number of `replicas` in [ms-inference-scheduling/values.yaml](./ms-inference-scheduling/values.yaml#L36)
 
+#### Scripted GKE + `agentgateway` workflow
+
+If you are running this guide on GKE with `agentgateway`, use the opinionated script set in [scripts/gke-agentgateway/README.md](./scripts/gke-agentgateway/README.md). It separates:
+
+- cold start from scratch
+- cloud infra parking and resume
+- queued H100 capacity requests
+- in-place scaling of decode, EPP, and gateway deployments
+- smoke testing from an in-cluster curl client
+
 
 **_NOTE:_** You can set the `$RELEASE_NAME_POSTFIX` env variable to change the release names. This is how we support concurrent installs. The value must follow DNS-1035 naming conventions: consist of lowercase alphanumeric characters or '-', start with an alphabetic character, and end with an alphanumeric character. Ex: `RELEASE_NAME_POSTFIX=inference-scheduling-2 helmfile apply -n ${NAMESPACE}`
 

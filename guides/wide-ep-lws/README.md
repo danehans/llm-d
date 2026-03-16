@@ -213,6 +213,10 @@ export GATEWAY_IP=$(kubectl get gateway/llm-d-inference-gateway -n ${NAMESPACE} 
 
 2. Follow the [benchmark guide](../../guides/benchmark/README.md) to deploy the benchmark tool and analyze the benchmark results. Notably, select the corresponding benchmark template:
 
+> **Note:** The repo currently references `wide_ep_template.yaml`, but that
+> benchmark template is not present in `guides/benchmark/` yet. Tracking issue:
+> [#974](https://github.com/llm-d/llm-d/issues/974).
+
 ```
 export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/wide_ep_template.yaml
 ```

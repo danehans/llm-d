@@ -43,6 +43,53 @@ For full, customizable benchmarking, please refer to [llm-d-benchmark](https://g
 
   </details>
 
+## Scripted workflow
+
+For a repeatable scripted path, use [scripts/benchmark.sh](./scripts/benchmark.sh).
+It resolves the gateway service, picks the matching benchmark template, can
+create the benchmark PVC, renders the benchmark config, downloads
+`run_only.sh`, and runs the benchmark.
+
+Supported `STACK_TYPE` values:
+
+- `inference-scheduling`
+- `precise`
+- `pd-disaggregation`
+- `wva-inference-scheduling`
+
+Examples:
+
+```bash
+export NAMESPACE=llmd
+export STACK_TYPE=inference-scheduling
+export RELEASE_NAME_POSTFIX=is
+export BENCHMARK_PROFILE=guidellm
+# Optional for smaller clusters:
+# export BENCHMARK_HARNESS_CPU=4
+# export BENCHMARK_HARNESS_MEMORY=8Gi
+# Optional if the CPU pool is too small for the launcher:
+# export BENCHMARK_HARNESS_TOLERATE_GPU_NODES=true
+
+guides/benchmark/scripts/benchmark.sh env
+guides/benchmark/scripts/benchmark.sh ensure-pvc
+guides/benchmark/scripts/benchmark.sh check-pvc
+guides/benchmark/scripts/benchmark.sh render-config
+guides/benchmark/scripts/benchmark.sh run
+```
+
+`check-pvc` reports the current PVC phase before the benchmark starts. If the
+claim is `Pending` with warning events, the script now fails early and prints
+those warnings as the blocker. If the claim is `Pending` with no warnings, the
+script explains that this is usually expected for `WaitForFirstConsumer`
+storage classes and that the harness pod should trigger binding.
+
+To inspect a running or completed benchmark:
+
+```bash
+guides/benchmark/scripts/benchmark.sh status
+guides/benchmark/scripts/benchmark.sh results
+```
+
 ## Set your namespace, PVC, and project root directory
 
   ```bash
@@ -102,6 +149,10 @@ For full, customizable benchmarking, please refer to [llm-d-benchmark](https://g
 > <td>
 > <details>
 > <summary><b>Wide Expert-Parallelism</b></summary>
+>
+> Wide EP benchmark support is not fully wired in this repo yet. The docs still
+> reference `wide_ep_template.yaml`, but that template is currently missing.
+> Tracking issue: [#974](https://github.com/llm-d/llm-d/issues/974).
 >
 > ```bash
 > export GATEWAY_SVC=$(kubectl get svc -n "${NAMESPACE}" \

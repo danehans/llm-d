@@ -32,6 +32,10 @@ environments:
 
 ---
 
+{{- $llmdInfraChart := env "LLMD_INFRA_CHART" | default "llm-d-infra/llm-d-infra" -}}
+{{- $infraValuesOverlay := env "INFRA_VALUES_OVERLAY" -}}
+{{- $gaieValuesOverlay := env "GAIE_VALUES_OVERLAY" -}}
+{{- $msValuesOverlay := env "MS_VALUES_OVERLAY" -}}
 {{- $ns := .Namespace | default "llm-d-inference-scheduling" -}}
 {{- $rn := (env "RELEASE_NAME_POSTFIX") | default "inference-scheduling" -}}
 
@@ -45,8 +49,10 @@ releases:
 {{- if ne .Environment.Name "standalone" }}
   - name: {{ printf "infra-%s" $rn | quote }}
     namespace: {{ $ns }}
-    chart: llm-d-infra/llm-d-infra
+    chart: {{ $llmdInfraChart | quote }}
+    {{- if not (hasPrefix "/" $llmdInfraChart) }}
     version: v1.3.6
+    {{- end }}
     installed:  true
     labels:
       type: infrastructure
@@ -54,6 +60,9 @@ releases:
     values:
       - gateway:
           {{ .Environment.Values.gateway | toYaml | nindent 10 }}
+      {{- if ne $infraValuesOverlay "" }}
+      - {{ $infraValuesOverlay | quote }}
+      {{- end }}
 {{- end }}
 
   - name: {{ printf "gaie-%s" $rn | quote }}
@@ -72,6 +81,9 @@ releases:
       - gaie-inference-scheduling/values_sglang.yaml
       {{- else }}
       - gaie-inference-scheduling/values.yaml
+      {{- end }}
+      {{- if ne $gaieValuesOverlay "" }}
+      - {{ $gaieValuesOverlay | quote }}
       {{- end }}
     # Apply provider name if on GKE
     {{- if or (eq .Environment.Name "gke") (eq .Environment.Name "gke_tpu") }}
@@ -123,6 +135,9 @@ releases:
       - ms-inference-scheduling/values_sglang.yaml
     {{- else }}
       - ms-inference-scheduling/values.yaml
+    {{- end }}
+    {{- if ne $msValuesOverlay "" }}
+      - {{ $msValuesOverlay | quote }}
     {{- end }}
     set:
     {{- if or (eq .Environment.Name "gke") (eq .Environment.Name "gke_tpu") }}
