@@ -44,6 +44,8 @@ export LLMD_INFERENCE_SCHEDULER_IMAGE_TAG="v0.7.0"
 export LLMD_ROUTING_SIDECAR_IMAGE="<YOUR_IMAGE_HUB>/<YOUR_IMAGE_REPO>/llm-d-routing-sidecar:v0.7.0"
 ```
 
+For the full local kind + `agentgateway` E2E recreation flow, see [LOCAL-E2E.md](./LOCAL-E2E.md).
+
 **_NOTE:_** This uses Istio as the default provider, see [Gateway Options](./README.md#gateway-options) for installing with a specific provider.
 
 ### Gateway options
