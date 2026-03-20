@@ -1,0 +1,99 @@
+api:
+  type: completion
+  streaming: true
+  headers: null
+data:
+  type: shared_prefix
+  path: null
+  input_distribution: null
+  output_distribution: null
+  shared_prefix:
+    num_unique_system_prompts: 32
+    num_users_per_system_prompt: 32
+    system_prompt_len: 2048
+    question_len: 256
+    output_len: 256
+    enable_multi_turn_chat: false
+  trace: null
+load:
+  type: constant
+  interval: 1.0
+  stages:
+  - rate: 2.0
+    duration: 50
+    num_requests: null
+    concurrency_level: null
+  - rate: 5.0
+    duration: 50
+    num_requests: null
+    concurrency_level: null
+  - rate: 8.0
+    duration: 50
+    num_requests: null
+    concurrency_level: null
+  - rate: 10.0
+    duration: 50
+    num_requests: null
+    concurrency_level: null
+  - rate: 12.0
+    duration: 50
+    num_requests: null
+    concurrency_level: null
+  - rate: 15.0
+    duration: 50
+    num_requests: null
+    concurrency_level: null
+  - rate: 20.0
+    duration: 50
+    num_requests: null
+    concurrency_level: null
+  sweep: null
+  num_workers: 4
+  worker_max_concurrency: 100
+  worker_max_tcp_connections: 2500
+  trace: null
+  circuit_breakers: []
+  request_timeout: null
+  lora_traffic_split: null
+metrics: null
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+    per_adapter: true
+    per_adapter_stage: false
+    percentiles:
+    - 0.1
+    - 1.0
+    - 5.0
+    - 10.0
+    - 25.0
+    - 50.0
+    - 75.0
+    - 90.0
+    - 95.0
+    - 99.0
+    - 99.9
+  prometheus:
+    summary: true
+    per_stage: false
+storage:
+  local_storage:
+    path: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B
+    report_file_prefix: null
+  google_cloud_storage: null
+  simple_storage_service: null
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-32B
+  base_url: http://infra-inference-scheduling-inference-gateway.llmd.svc.cluster.local:80
+  ignore_eos: true
+  api_key: null
+  cert_path: null
+  key_path: null
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-32B
+  trust_remote_code: null
+  token: null
+circuit_breakers: null

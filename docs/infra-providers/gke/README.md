@@ -2,7 +2,7 @@
 
 This document covers configuring GKE clusters for running high performance LLM inference with llm-d.
 
-For the current GKE validation state, tested paths, and required local overrides, see the [GKE validation tracker](./VALIDATION-TRACKER.md).
+For the current GKE validation state, tested paths, required local overrides, and committed benchmark artifact bundles, see the [GKE validation tracker](./VALIDATION-TRACKER.md).
 
 ## Prerequisites
 

@@ -1,0 +1,174 @@
+2026-03-20 21:22:40,156 - inference_perf.config - INFO - Using configuration from: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/shared_prefix_synthetic.yaml
+2026-03-20 21:22:40,172 - inference_perf.config - INFO - Benchmarking with the following config:
+
+api:
+  type: completion
+  streaming: true
+  headers: null
+data:
+  type: shared_prefix
+  path: null
+  input_distribution: null
+  output_distribution: null
+  shared_prefix:
+    num_groups: 32
+    num_prompts_per_group: 32
+    system_prompt_len: 2048
+    question_len: 256
+    output_len: 256
+  trace: null
+load:
+  type: constant
+  interval: 1.0
+  stages:
+  - !!python/object:inference_perf.config.StandardLoadStage
+    __dict__:
+      rate: 2.0
+      duration: 50
+      num_requests: null
+      concurrency_level: null
+    __pydantic_extra__: null
+    __pydantic_fields_set__: !!set
+      rate: null
+      duration: null
+    __pydantic_private__: null
+  - !!python/object:inference_perf.config.StandardLoadStage
+    __dict__:
+      rate: 5.0
+      duration: 50
+      num_requests: null
+      concurrency_level: null
+    __pydantic_extra__: null
+    __pydantic_fields_set__: !!set
+      rate: null
+      duration: null
+    __pydantic_private__: null
+  - !!python/object:inference_perf.config.StandardLoadStage
+    __dict__:
+      rate: 8.0
+      duration: 50
+      num_requests: null
+      concurrency_level: null
+    __pydantic_extra__: null
+    __pydantic_fields_set__: !!set
+      rate: null
+      duration: null
+    __pydantic_private__: null
+  - !!python/object:inference_perf.config.StandardLoadStage
+    __dict__:
+      rate: 10.0
+      duration: 50
+      num_requests: null
+      concurrency_level: null
+    __pydantic_extra__: null
+    __pydantic_fields_set__: !!set
+      rate: null
+      duration: null
+    __pydantic_private__: null
+  - !!python/object:inference_perf.config.StandardLoadStage
+    __dict__:
+      rate: 12.0
+      duration: 50
+      num_requests: null
+      concurrency_level: null
+    __pydantic_extra__: null
+    __pydantic_fields_set__: !!set
+      rate: null
+      duration: null
+    __pydantic_private__: null
+  - !!python/object:inference_perf.config.StandardLoadStage
+    __dict__:
+      rate: 15.0
+      duration: 50
+      num_requests: null
+      concurrency_level: null
+    __pydantic_extra__: null
+    __pydantic_fields_set__: !!set
+      rate: null
+      duration: null
+    __pydantic_private__: null
+  - !!python/object:inference_perf.config.StandardLoadStage
+    __dict__:
+      rate: 20.0
+      duration: 50
+      num_requests: null
+      concurrency_level: null
+    __pydantic_extra__: null
+    __pydantic_fields_set__: !!set
+      rate: null
+      duration: null
+    __pydantic_private__: null
+  sweep: null
+  num_workers: 4
+  worker_max_concurrency: 100
+  worker_max_tcp_connections: 2500
+  trace: null
+  circuit_breakers: []
+  request_timeout: null
+  lora_traffic_split: null
+metrics: null
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+    per_adapter: true
+    per_adapter_stage: false
+    percentiles:
+    - 0.1
+    - 1.0
+    - 5.0
+    - 10.0
+    - 25.0
+    - 50.0
+    - 75.0
+    - 90.0
+    - 95.0
+    - 99.0
+    - 99.9
+  prometheus:
+    summary: true
+    per_stage: false
+storage:
+  local_storage:
+    path: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B
+    report_file_prefix: null
+  google_cloud_storage: null
+  simple_storage_service: null
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-32B
+  base_url: http://infra-inference-scheduling-inference-gateway.llmd.svc.cluster.local:80
+  ignore_eos: true
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-32B
+circuit_breakers: null
+
+
+2026-03-20 21:22:40,172 - inference_perf.client.filestorage.local - INFO - Report files will be stored at: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B
+2026-03-20 21:22:44,683 - inference_perf.loadgen.load_generator - INFO - Stage 0 - run started
+2026-03-20 21:23:39,775 - inference_perf.loadgen.load_generator - INFO - Stage 0 - run completed
+2026-03-20 21:23:40,776 - inference_perf.loadgen.load_generator - INFO - Stage 1 - run started
+2026-03-20 21:24:35,858 - inference_perf.loadgen.load_generator - INFO - Stage 1 - run completed
+2026-03-20 21:24:36,859 - inference_perf.loadgen.load_generator - INFO - Stage 2 - run started
+2026-03-20 21:25:31,940 - inference_perf.loadgen.load_generator - INFO - Stage 2 - run completed
+2026-03-20 21:25:32,941 - inference_perf.loadgen.load_generator - INFO - Stage 3 - run started
+2026-03-20 21:26:28,021 - inference_perf.loadgen.load_generator - INFO - Stage 3 - run completed
+2026-03-20 21:26:29,024 - inference_perf.loadgen.load_generator - INFO - Stage 4 - run started
+2026-03-20 21:27:24,122 - inference_perf.loadgen.load_generator - INFO - Stage 4 - run completed
+2026-03-20 21:27:25,124 - inference_perf.loadgen.load_generator - INFO - Stage 5 - run started
+2026-03-20 21:28:20,224 - inference_perf.loadgen.load_generator - INFO - Stage 5 - run completed
+2026-03-20 21:28:21,225 - inference_perf.loadgen.load_generator - INFO - Stage 6 - run started
+2026-03-20 21:29:16,326 - inference_perf.loadgen.load_generator - INFO - Stage 6 - run completed
+2026-03-20 21:29:17,343 - inference_perf.reportgen.base - INFO - Generating Reports...
+2026-03-20 21:29:20,160 - inference_perf.reportgen.base - WARNING - Prometheus Metrics Client is not configured or not of type PrometheusMetricsClient
+2026-03-20 21:29:20,170 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/summary_lifecycle_metrics.json
+2026-03-20 21:29:20,178 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/stage_0_lifecycle_metrics.json
+2026-03-20 21:29:20,185 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/stage_1_lifecycle_metrics.json
+2026-03-20 21:29:20,193 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/stage_2_lifecycle_metrics.json
+2026-03-20 21:29:20,200 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/stage_3_lifecycle_metrics.json
+2026-03-20 21:29:20,207 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/stage_4_lifecycle_metrics.json
+2026-03-20 21:29:20,214 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/stage_5_lifecycle_metrics.json
+2026-03-20 21:29:20,222 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/stage_6_lifecycle_metrics.json
+2026-03-20 21:29:24,307 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/per_request_lifecycle_metrics.json
+2026-03-20 21:29:24,322 - inference_perf.client.filestorage.local - INFO - Report saved to: /requests/inference-perf_1774041733_shared_prefix_synthetic_inference-scheduling-shared-prefix-Qwen3-32B/config.yaml

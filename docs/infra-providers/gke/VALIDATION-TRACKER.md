@@ -41,14 +41,14 @@ This tracker covers the following work:
 | `control-pool` | `e2-standard-8` | EPP control plane capacity | Added because the EPP deployment requests `4` vCPU and did not fit reliably on `e2-standard-4` nodes |
 | `default-pool` | `e2-standard-4` | General cluster/system capacity | Used for baseline cluster services |
 
-### Current live precise deployment
+### Current live deployment
 
 - Gateway service type: `LoadBalancer`
-- Gateway address: `34.55.152.96`
-- Active guide: `guides/precise-prefix-cache-aware`
+- Gateway address: `34.28.69.171`
+- Active guide: `guides/inference-scheduling`
 - Current decode replica count: `8`
 - Current EPP image: `docker.io/danehans/llm-d-inference-scheduler:v0.7.0-rc.2`
-- Current tokenizer sidecar image: `ghcr.io/llm-d/llm-d-uds-tokenizer:v0.6.0`
+- Current tokenizer sidecar image: not deployed in the active inference-scheduling stack
 - Current model image: `docker.io/vllm/vllm-openai:nightly-39474513f6631b1bc39a2400126bd7ff9394a774`
 
 ## Versions used in successful runs
@@ -113,19 +113,24 @@ The following table is the tight summary intended for later doc/report generatio
 | Precise `shared_prefix_synthetic` | `2 rps` | `0` | `3.707s` | `3.832s` | `103.3 ms` | `203.2 ms` | `5006.5 tok/s` | First stage of the shared-prefix benchmark |
 | Precise `shared_prefix_synthetic` | `20 rps` | `0` | `3.937s` | `4.176s` | `105.2 ms` | `165.6 ms` | `50086.1 tok/s` | Final stage of the shared-prefix benchmark |
 
-### Precise benchmark artifacts
+### Benchmark artifacts
 
-Local result bundles captured from the three precise benchmark runs:
+Committed result bundles captured from the precise and inference-scheduling benchmark runs:
 
-- `precise-is-guidellm-results-8pods`
-- `precise-is-random-results-8pods`
-- `precise-is-shared-prefix-results-8pods`
+- [`precise-is-guidellm-results-8pods`](../../../precise-is-guidellm-results-8pods)
+- [`precise-is-random-results-8pods`](../../../precise-is-random-results-8pods)
+- [`precise-is-shared-prefix-results-8pods`](../../../precise-is-shared-prefix-results-8pods)
+- [`inference-scheduling-shared-prefix-results-8pods`](../../../inference-scheduling-shared-prefix-results-8pods)
 
-The shared-prefix run also generated chart-ready outputs:
+The shared-prefix result bundles include chart-ready outputs, for example:
 
 - `analysis/latency_vs_qps.png`
 - `analysis/throughput_vs_qps.png`
 - `analysis/throughput_vs_latency.png`
+
+These bundles are the source material for the later benchmark subsection planned for the inference-routing section of the `agentgateway.dev` docs.
+
+The very large raw `per_request_lifecycle_metrics.json` traces from the shared-prefix runs are intentionally kept out of git due to GitHub file-size limits. The committed bundles retain the summary reports, plots, configs, and logs needed for doc work.
 
 ### Precise benchmark routing evidence
 

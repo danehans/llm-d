@@ -1,0 +1,43 @@
+load:
+  type: constant
+  stages:
+    - rate: 2
+      duration: 50
+    - rate: 5
+      duration: 50
+    - rate: 8
+      duration: 50
+    - rate: 10
+      duration: 50
+    - rate: 12
+      duration: 50
+    - rate: 15
+      duration: 50
+    - rate: 20
+      duration: 50
+api:
+  type: completion
+  streaming: true
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-32B
+  base_url: http://infra-kv-events-inference-gateway.llmd.svc.cluster.local:80
+  ignore_eos: true
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-32B
+data:
+  type: shared_prefix
+  shared_prefix:
+    num_groups: 32
+    num_prompts_per_group: 32
+    system_prompt_len: 2048
+    question_len: 256
+    output_len: 256
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+storage:
+  local_storage:
+    path: /requests/inference-perf_1774040070_shared_prefix_synthetic_precise-shared-prefix-Qwen3-32B

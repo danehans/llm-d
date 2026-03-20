@@ -1,0 +1,79 @@
+api:
+  type: completion
+  streaming: true
+  headers: null
+data:
+  type: random
+  path: null
+  input_distribution:
+    min: 10
+    max: 100
+    mean: 50.0
+    std_dev: 10.0
+    total_count: 100
+  output_distribution:
+    min: 10
+    max: 100
+    mean: 50.0
+    std_dev: 10.0
+    total_count: 100
+  shared_prefix: null
+  trace: null
+load:
+  type: constant
+  interval: 1.0
+  stages:
+  - rate: 1.0
+    duration: 30
+    num_requests: null
+    concurrency_level: null
+  sweep: null
+  num_workers: 4
+  worker_max_concurrency: 100
+  worker_max_tcp_connections: 2500
+  trace: null
+  circuit_breakers: []
+  request_timeout: null
+  lora_traffic_split: null
+metrics: null
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+    per_adapter: true
+    per_adapter_stage: false
+    percentiles:
+    - 0.1
+    - 1.0
+    - 5.0
+    - 10.0
+    - 25.0
+    - 50.0
+    - 75.0
+    - 90.0
+    - 95.0
+    - 99.0
+    - 99.9
+  prometheus:
+    summary: true
+    per_stage: false
+storage:
+  local_storage:
+    path: /requests/inference-perf_1774039897_sanity_random_precise-random-Qwen3-32B
+    report_file_prefix: null
+  google_cloud_storage: null
+  simple_storage_service: null
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-32B
+  base_url: http://infra-kv-events-inference-gateway.llmd.svc.cluster.local:80
+  ignore_eos: true
+  api_key: null
+  cert_path: null
+  key_path: null
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-32B
+  trust_remote_code: null
+  token: null
+circuit_breakers: null

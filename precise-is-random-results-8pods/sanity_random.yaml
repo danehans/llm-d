@@ -1,0 +1,37 @@
+load:
+  type: constant
+  stages:
+    - rate: 1
+      duration: 30
+api:
+  type: completion
+  streaming: true
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-32B
+  base_url: http://infra-kv-events-inference-gateway.llmd.svc.cluster.local:80
+  ignore_eos: true
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-32B
+data:
+  type: random
+  input_distribution:
+    min: 10
+    max: 100
+    mean: 50
+    std_dev: 10
+    total_count: 100
+  output_distribution:
+    min: 10
+    max: 100
+    mean: 50
+    std_dev: 10
+    total_count: 100
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+storage:
+  local_storage:
+    path: /requests/inference-perf_1774039897_sanity_random_precise-random-Qwen3-32B

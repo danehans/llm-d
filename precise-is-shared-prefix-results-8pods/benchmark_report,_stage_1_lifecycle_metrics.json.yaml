@@ -1,0 +1,231 @@
+metrics:
+  latency:
+    inter_token_latency:
+      max: 0.14252191500054323
+      mean: 0.01412000955989069
+      min: 9.489000149187632e-06
+      p0p1: 1.3131943183907424e-05
+      p1: 2.7116661076433957e-05
+      p10: 0.012656842301294092
+      p25: 0.013700191500447545
+      p5: 0.010663243999260885
+      p50: 0.014071259000047576
+      p75: 0.014453186999162426
+      p90: 0.015060317100142127
+      p95: 0.01674171649974596
+      p99: 0.03496711798123215
+      p99p9: 0.047885507834204026
+      units: s/token
+    normalized_time_per_output_token:
+      max: 0.47531570599994666
+      mean: 0.022126343971202864
+      min: 0.01401280592187959
+      p0p1: 0.014021620548166256
+      p1: 0.014063890934218719
+      p10: 0.014357012536719792
+      p25: 0.014493012193723877
+      p5: 0.014251472431816665
+      p50: 0.014713889444880526
+      p75: 0.014966790579901749
+      p90: 0.015177139700398738
+      p95: 0.015529487950720058
+      p99: 0.33378461910201146
+      p99p9: 0.45098579924387144
+      units: s/token
+    request_latency:
+      max: 3.973149897999974
+      mean: 3.7408131841959693
+      min: 3.5764559420003934
+      p0p1: 3.577255291511294
+      p1: 3.5816760954094207
+      p10: 3.657163904600202
+      p25: 3.688145767998776
+      p5: 3.6353835016999256
+      p50: 3.7346587874999386
+      p75: 3.7926425760010716
+      p90: 3.8330223642995405
+      p95: 3.8519160906492287
+      p99: 3.8959029660793565
+      p99p9: 3.956310580032798
+      units: s
+    time_per_output_token:
+      max: 0.014744623113280397
+      mean: 0.01412000955989069
+      min: 0.01353216414843672
+      p0p1: 0.013536604688964367
+      p1: 0.013582794666326592
+      p10: 0.013807154990627879
+      p25: 0.013940697783201728
+      p5: 0.01373306751269716
+      p50: 0.014099285423828434
+      p75: 0.014295650784175606
+      p90: 0.014464106378515851
+      p95: 0.014541514829299374
+      p99: 0.014683271016175468
+      p99p9: 0.014742705842459486
+      units: s/token
+    time_to_first_token:
+      max: 0.22008605799965153
+      mean: 0.09745421319601882
+      min: 0.0677853570014122
+      p0p1: 0.06781303982524696
+      p1: 0.06809484497000085
+      p10: 0.08116983759900905
+      p25: 0.0894778065007813
+      p5: 0.07653073875026166
+      p50: 0.09550560250045237
+      p75: 0.10273675350072153
+      p90: 0.11010388919967226
+      p95: 0.11594150070022806
+      p99: 0.18397562025056677
+      p99p9: 0.21701915986003445
+      units: s
+  requests:
+    failures: 0
+    input_length:
+      max: 2456.0
+      mean: 2425.372
+      min: 2392.0
+      p0p1: 2392.0
+      p1: 2393.0
+      p10: 2408.9
+      p25: 2417.0
+      p5: 2402.45
+      p50: 2427.0
+      p75: 2434.0
+      p90: 2440.0
+      p95: 2447.0
+      p99: 2452.0
+      p99p9: 2455.253
+      units: count
+    output_length:
+      max: 256.0
+      mean: 247.508
+      min: 8.0
+      p0p1: 8.498
+      p1: 11.47
+      p10: 249.9
+      p25: 253.0
+      p5: 244.9
+      p50: 255.0
+      p75: 256.0
+      p90: 256.0
+      p95: 256.0
+      p99: 256.0
+      p99p9: 256.0
+      units: count
+    total: 250
+  throughput:
+    output_tokens_per_sec: 1154.4975437581857
+    requests_per_sec: 4.664485769179929
+    total_tokens_per_sec: 12467.610722725647
+  time:
+    duration: 49.961782315000164
+scenario:
+  load:
+    args:
+      api:
+        headers: null
+        streaming: true
+        type: completion
+      circuit_breakers: null
+      data:
+        input_distribution: null
+        output_distribution: null
+        path: null
+        shared_prefix:
+          enable_multi_turn_chat: false
+          num_unique_system_prompts: 32
+          num_users_per_system_prompt: 32
+          output_len: 256
+          question_len: 256
+          system_prompt_len: 2048
+        trace: null
+        type: shared_prefix
+      load:
+        circuit_breakers: []
+        interval: 1.0
+        lora_traffic_split: null
+        num_workers: 4
+        request_timeout: null
+        stages:
+        - concurrency_level: null
+          duration: 50
+          num_requests: null
+          rate: 2.0
+        - concurrency_level: null
+          duration: 50
+          num_requests: null
+          rate: 5.0
+        - concurrency_level: null
+          duration: 50
+          num_requests: null
+          rate: 8.0
+        - concurrency_level: null
+          duration: 50
+          num_requests: null
+          rate: 10.0
+        - concurrency_level: null
+          duration: 50
+          num_requests: null
+          rate: 12.0
+        - concurrency_level: null
+          duration: 50
+          num_requests: null
+          rate: 15.0
+        - concurrency_level: null
+          duration: 50
+          num_requests: null
+          rate: 20.0
+        sweep: null
+        trace: null
+        type: constant
+        worker_max_concurrency: 100
+        worker_max_tcp_connections: 2500
+      metrics: null
+      report:
+        prometheus:
+          per_stage: false
+          summary: true
+        request_lifecycle:
+          per_adapter: true
+          per_adapter_stage: false
+          per_request: true
+          per_stage: true
+          percentiles:
+          - 0.1
+          - 1.0
+          - 5.0
+          - 10.0
+          - 25.0
+          - 50.0
+          - 75.0
+          - 90.0
+          - 95.0
+          - 99.0
+          - 99.9
+          summary: true
+      server:
+        api_key: null
+        base_url: http://infra-kv-events-inference-gateway.llmd.svc.cluster.local:80
+        cert_path: null
+        ignore_eos: true
+        key_path: null
+        model_name: Qwen/Qwen3-32B
+        type: vllm
+      storage:
+        google_cloud_storage: null
+        local_storage:
+          path: /requests/inference-perf_1774040070_shared_prefix_synthetic_precise-shared-prefix-Qwen3-32B
+          report_file_prefix: null
+        simple_storage_service: null
+      tokenizer:
+        pretrained_model_name_or_path: Qwen/Qwen3-32B
+        token: null
+        trust_remote_code: null
+    metadata:
+      stage: 1
+    name: inference-perf
+  model:
+    name: unknown
+version: '0.1'
