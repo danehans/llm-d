@@ -32,10 +32,12 @@ environments:
 
 {{- $ns := .Namespace | default "llm-d-pd" -}}
 {{- $rn := (env "RELEASE_NAME_POSTFIX") | default "pd" -}}
+{{- $llmdInfraChart := env "LLMD_INFRA_CHART" | default "llm-d-infra/llm-d-infra" -}}
 {{- $schedulerImageHub := env "LLMD_INFERENCE_SCHEDULER_IMAGE_HUB" | default "" -}}
 {{- $schedulerImageName := env "LLMD_INFERENCE_SCHEDULER_IMAGE_NAME" | default "" -}}
 {{- $schedulerImageTag := env "LLMD_INFERENCE_SCHEDULER_IMAGE_TAG" | default "" -}}
 {{- $routingSidecarImage := env "LLMD_ROUTING_SIDECAR_IMAGE" | default "" -}}
+{{- $modelServerImage := env "LLMD_MODELSERVER_IMAGE" | default "" -}}
 
 repositories:
   - name: llm-d-modelservice
@@ -46,8 +48,10 @@ repositories:
 releases:
   - name: {{ printf "infra-%s" $rn | quote }}
     namespace: {{ $ns }}
-    chart: llm-d-infra/llm-d-infra
+    chart: {{ $llmdInfraChart | quote }}
+    {{- if not (hasPrefix "/" $llmdInfraChart) }}
     version: v1.3.6
+    {{- end }}
     installed: true
     labels:
       type: infrastructure
@@ -147,6 +151,12 @@ releases:
                 soft: 17179869184
     {{- end }}
     set:
+    {{- if $modelServerImage }}
+      - name: "decode.containers[0].image"
+        value: {{ $modelServerImage | quote }}
+      - name: "prefill.containers[0].image"
+        value: {{ $modelServerImage | quote }}
+    {{- end }}
     {{- if or (eq .Environment.Name "gke") (eq .Environment.Name "gke_tpu") }}
       - name: 'decode.containers[0].resources.limits.rdma/ib'
         value: "null"

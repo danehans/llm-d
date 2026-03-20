@@ -2,6 +2,8 @@
 
 This document covers configuring GKE clusters for running high performance LLM inference with llm-d.
 
+For the current reservation-backed GKE validation state, tested paths, and required local overrides, see the [GKE reservation-backed validation tracker](./VALIDATION-TRACKER.md).
+
 ## Prerequisites
 
 llm-d on GKE is tested with the following configurations:

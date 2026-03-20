@@ -151,11 +151,14 @@ RUN --mount=type=secret,id=aws_access_key_id \
     /tmp/install-sccache.sh && \
     rm -f /tmp/install-sccache.sh
 
-# Install uv and setup Python virtual environment
-RUN export UV_INSTALL_DIR=/usr/local/bin && \
-    curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    uv venv /opt/vllm --python ${PYTHON_VERSION} && \
-    uv pip install --no-cache -U wheel meson-python ninja pybind11 build setuptools setuptools-scm
+# Install Python tooling and setup a local uv-compatible shim.
+# The shim keeps the existing scripts working during local amd64 builds on arm64 hosts,
+# where the upstream uv binary can segfault under emulation.
+COPY docker/scripts/common/uv-shim.sh /usr/local/bin/uv
+RUN chmod +x /usr/local/bin/uv && \
+    python${PYTHON_VERSION} -m venv /opt/vllm && \
+    . /opt/vllm/bin/activate && \
+    python -m pip install --no-cache-dir -U pip wheel meson-python ninja pybind11 build setuptools setuptools-scm
 
 # Set up build environment paths
 ENV NVSHMEM_DIR="/opt/nvshmem-${NVSHMEM_VERSION}" \
@@ -411,15 +414,16 @@ RUN if [ -d /opt/nixl/include ]; then \
     fi; \
     rm -rf /opt/nixl
 
-# Install uv and setup Python virtual environment
-RUN export UV_INSTALL_DIR=/usr/local/bin && \
-    curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    uv venv /opt/vllm --python ${PYTHON_VERSION} && \
+# Install Python tooling and setup the local uv-compatible shim.
+COPY docker/scripts/common/uv-shim.sh /usr/local/bin/uv
+RUN chmod +x /usr/local/bin/uv && \
+    python${PYTHON_VERSION} -m venv /opt/vllm && \
     rm -f /usr/bin/python3 /usr/bin/python3-config /usr/bin/pip && \
     ln -s /opt/vllm/bin/python3 /usr/bin/python3 && \
     ln -s /opt/vllm/bin/python3-config /usr/bin/python3-config && \
     ln -s /opt/vllm/bin/pip /usr/bin/pip && \
-    uv pip install --no-cache -U wheel
+    . /opt/vllm/bin/activate && \
+    python -m pip install --no-cache-dir -U pip wheel
 
 # Copy compiled wheels
 COPY --from=builder /wheels/*.whl /tmp/wheels/

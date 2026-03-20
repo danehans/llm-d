@@ -25,6 +25,7 @@ environments:
 {{- $schedulerImageName := env "LLMD_INFERENCE_SCHEDULER_IMAGE_NAME" | default "" -}}
 {{- $schedulerImageTag := env "LLMD_INFERENCE_SCHEDULER_IMAGE_TAG" | default "" -}}
 {{- $routingSidecarImage := env "LLMD_ROUTING_SIDECAR_IMAGE" | default "" -}}
+{{- $modelServerImage := env "LLMD_MODELSERVER_IMAGE" | default "" -}}
 
 repositories:
   - name: llm-d-modelservice
@@ -97,6 +98,11 @@ releases:
     {{- if or (eq .Environment.Name "istio") (eq .Environment.Name "default") }}
       - routing:
           {{ .Environment.Values.routing | toYaml | nindent 10 }}
+    {{- end }}
+    set:
+    {{- if $modelServerImage }}
+      - name: "decode.containers[0].image"
+        value: {{ $modelServerImage | quote }}
     {{- end }}
     labels:
       kind: inference-stack
