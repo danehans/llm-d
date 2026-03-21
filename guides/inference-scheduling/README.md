@@ -265,6 +265,26 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 **_NOTE:_** If you set a custom `RELEASE_NAME_POSTFIX`, replace `infra-inference-scheduling-inference-gateway-istio` with `infra-${RELEASE_NAME_POSTFIX}-inference-gateway-istio` in the port-forward command.
 
+### Direct Service Baseline (No Gateway or EPP in the Request Path)
+
+If you want a backend-only baseline, create a `ClusterIP` Service that fronts the decode pods directly and test against that Service instead of the gateway. This leaves the guide deployment unchanged, but your requests bypass the gateway and scheduler.
+
+```bash
+kubectl apply -n ${NAMESPACE} -f direct-service.yaml
+kubectl get svc ms-inference-scheduling-direct -n ${NAMESPACE}
+kubectl get endpointslice -n ${NAMESPACE} -l kubernetes.io/service-name=ms-inference-scheduling-direct
+```
+
+The direct Service is intentionally narrow and selects only the inference-scheduling decode pods for the default `Qwen3-32B` deployment. If you run multiple inference-scheduling installs in the same namespace, copy [direct-service.yaml](./direct-service.yaml) and tighten the selector for your environment.
+
+To smoke test the direct path, port-forward the direct Service:
+
+```bash
+kubectl port-forward -n ${NAMESPACE} svc/ms-inference-scheduling-direct 8080:80
+```
+
+Then send the same requests as above. This path is useful for establishing a baseline before adding gateway-based routing back into the request path.
+
 ## Using the stack
 
 For instructions on getting started making inference requests see [our docs](../../docs/getting-started-inferencing.md)
@@ -273,9 +293,17 @@ For instructions on getting started making inference requests see [our docs](../
 
 To run benchmarks against the installed llm-d stack, you need [run_only.sh](https://github.com/llm-d/llm-d-benchmark/blob/main/existing_stack/run_only.sh), a template file from [guides/benchmark](../benchmark/), and a Persistent Volume Claim (PVC) to store the results. Follow the instructions in the [benchmark doc](../benchmark/README.md).
 
+For a backend-only baseline, set `GATEWAY_SVC=ms-inference-scheduling-direct` after applying [direct-service.yaml](./direct-service.yaml). The benchmark templates continue to use the historical `GATEWAY_SVC` variable name, but it can point either at the gateway Service or at a direct Service that fronts the decode pods.
+
+For a direct-Service vs `agentgateway` + EPP comparison on this path, use
+[inference_scheduling_shared_prefix_template.yaml](../benchmark/inference_scheduling_shared_prefix_template.yaml).
+The heavier [inference_scheduling_guide_template.yaml](../benchmark/inference_scheduling_guide_template.yaml)
+is still useful for publication-style standalone runs, but it was not the primary template used for
+the final GKE baseline-vs-routed comparison package.
+
 ### Example
 
-This example uses [run_only.sh](https://github.com/llm-d/llm-d-benchmark/blob/main/existing_stack/run_only.sh) with the template [inference_scheduling_guide_template.yaml](../benchmark/inference_scheduling_guide_template.yaml).
+This example uses [run_only.sh](https://github.com/llm-d/llm-d-benchmark/blob/main/existing_stack/run_only.sh) with the template [inference_scheduling_shared_prefix_template.yaml](../benchmark/inference_scheduling_shared_prefix_template.yaml).
 
 The benchmark launches a pod (`llmdbench-harness-launcher`) that, in this case, uses `inference-perf` with a shared prefix synthetic workload named `shared_prefix_synthetic`. This workload runs several stages with different rates. The results will be stored on the provided PVC, accessible through the `llmdbench-harness-launcher` pod. Each experiment is saved under the `requests` folder, e.g.,/`requests/inference-perf_<experiment ID>_shared_prefix_synthetic_inference-scheduling_<model name>` folder.
 
@@ -293,13 +321,13 @@ Several results files will be created (see [Benchmark doc](../benchmark/README.m
   done
   ```
 
-Choose the `inference_scheduling_guide_template.yaml` template, then run:
+Choose the `inference_scheduling_shared_prefix_template.yaml` template, then run:
 
   ```bash
   export NAMESPACE=llm-d-inference-scheduler     # replace with your namespace
   export BENCHMARK_PVC=workload-pvc   # replace with your PVC name
   export GATEWAY_SVC=infra-inference-scheduling-inference-gateway-istio  # replace with your exact service name
-  envsubst < inference_scheduling_guide_template.yaml > config.yaml
+  envsubst < inference_scheduling_shared_prefix_template.yaml > config.yaml
   ```
 
 Edit `config.yaml` if further customization is needed, and then run the command

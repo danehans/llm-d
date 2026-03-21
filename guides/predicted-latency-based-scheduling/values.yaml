@@ -1,0 +1,86 @@
+inferenceExtension:
+  replicas: 1
+  image:
+    hub: registry.k8s.io/gateway-api-inference-extension
+    name: epp
+    tag: v1.4.0
+    pullPolicy: Always
+  flags:
+    v: 4
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      memory: 4Gi
+  extraServicePorts:
+    - name: latency-training
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+    - name: latency-predict-1
+      port: 8001
+      targetPort: 8001
+      protocol: TCP
+  monitoring:
+    interval: "10s"
+    prometheus:
+      enabled: true
+      auth:
+        secretName: predicted-latency-gateway-sa-metrics-reader-secret
+  latencyPredictor:
+    enabled: true
+    trainingServer:
+      resources:
+        requests:
+          cpu: "250m"
+          memory: 1Gi
+        limits:
+          cpu: "500m"
+          memory: 2Gi
+      config:
+        LATENCY_RETRAINING_INTERVAL_SEC: "10"
+        LATENCY_MIN_SAMPLES_FOR_RETRAIN: "100"
+        LATENCY_TTFT_MODEL_PATH: "/models/ttft.joblib"
+        LATENCY_TPOT_MODEL_PATH: "/models/tpot.joblib"
+        LATENCY_TTFT_SCALER_PATH: "/models/ttft_scaler.joblib"
+        LATENCY_TPOT_SCALER_PATH: "/models/tpot_scaler.joblib"
+        LATENCY_MODEL_TYPE: "xgboost"
+        LATENCY_MAX_TRAINING_DATA_SIZE_PER_BUCKET: "500"
+        LATENCY_OBJECTIVE_TYPE: "mean"
+    predictionServers:
+      count: 1
+      resources:
+        requests:
+          cpu: "500m"
+          memory: 1Gi
+        limits:
+          cpu: "1"
+          memory: 2Gi
+      config:
+        LATENCY_MODEL_TYPE: "xgboost"
+        PREDICT_HOST: "0.0.0.0"
+        LOCAL_TTFT_MODEL_PATH: "/server_models/ttft.joblib"
+        LOCAL_TPOT_MODEL_PATH: "/server_models/tpot.joblib"
+        LOCAL_TTFT_SCALER_PATH: "/server_models/ttft_scaler.joblib"
+        LOCAL_TPOT_SCALER_PATH: "/server_models/tpot_scaler.joblib"
+        UVICORN_WORKERS: "2"
+        OMP_NUM_THREADS: "1"
+        MODEL_SYNC_INTERVAL_SEC: "30"
+        LATENCY_OBJECTIVE_TYPE: "mean"
+    eppEnv:
+      LATENCY_MAX_SAMPLE_SIZE: "2000"
+      LATENCY_MAX_CONCURRENT_DISPATCHES: "8"
+      LATENCY_COALESCE_WINDOW_MS: "1"
+
+inferencePool:
+  targetPorts:
+    - number: 8000
+  modelServerType: vllm
+  modelServers:
+    matchLabels:
+      llm-d.ai/inference-serving: "true"
+      llm-d.ai/guide: "precise-prefix-cache-aware"
+
+provider:
+  name: none

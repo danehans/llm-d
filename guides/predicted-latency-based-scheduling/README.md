@@ -30,95 +30,103 @@ This experimental feature introduces **predicted latency based load balancing**,
 
 ### What is Tested
 
-This feature has been validated against the scenarios described in the [original design doc](https://docs.google.com/document/d/1q56wr3N5XGx0B21MzHu5oBsCiGi9VrbZAvyhP2VFG_c/edit?tab=t.0#heading=h.ob7j9esmcyd3) — including **short-prompt/long-completion**, **long-prompt/short-completion**, and **mixed workloads** — to compare baseline inference gateway routing versus prediction-based SLO routing. The benchmarking results are included in this doc.
+This feature has been validated against the scenarios described in the [original design doc](https://docs.google.com/document/d/1q56wr3N5XGx0B21MzHu5oBsCiGi9VrbZAvyhP2VFG_c/edit?tab=t.0#heading=h.ob7j9esmcyd3) — including **short-prompt/long-completion**, **long-prompt/short-completion**, and **mixed workloads** — to compare a direct backend baseline versus prediction-based SLO routing through the gateway. The committed comparison artifacts and the end-to-end reproduction flow are tracked in [../../docs/infra-providers/gke/VALIDATION-TRACKER.md](../../docs/infra-providers/gke/VALIDATION-TRACKER.md) and [../../docs/infra-providers/gke/HANDOFF.md](../../docs/infra-providers/gke/HANDOFF.md).
 
 This guide explains how to deploy EPP with latency predictor sidecars, configure profiles and scorers, and enable **SLO-aware routing** via headers.
 
 ---
 
+## Validated llm-d Workflow
+
+The current validated llm-d path does **not** require building custom GAIE images from the
+experimental branch. GAIE `v1.4.0` already ships latency-predictor support in the released
+`inferencepool` chart.
+
+The workflow validated in this repository layers prediction-based scheduling on top of the
+backend deployed by the precise guide:
+
+1. Deploy the precise backend:
+   - [../precise-prefix-cache-aware/README.md](../precise-prefix-cache-aware/README.md)
+2. Apply the direct baseline Service if you want a backend-only control:
+   - [../precise-prefix-cache-aware/direct-service.yaml](../precise-prefix-cache-aware/direct-service.yaml)
+3. Install a second `InferencePool` with latency prediction enabled:
+   - [./values.yaml](./values.yaml)
+4. Apply a header-matched `HTTPRoute` that sends only tagged requests to the predicted-latency pool:
+   - [./httproute.yaml](./httproute.yaml)
+
+This keeps the existing precise route intact and makes A/B testing possible on one live cluster:
+
+- direct backend baseline: `ms-kv-events-direct`
+- existing gateway path: `infra-kv-events-inference-gateway`
+- predicted-latency path: `infra-kv-events-inference-gateway` with `x-routing-scenario: predicted-latency`
+
 ## Prerequisites
 
-- **Install the Inference Gateway extension**
-  Follow the official installation steps here:
-  <https://gateway-api-inference-extension.sigs.k8s.io/guides/>
+- Deploy the precise guide stack and make sure it is healthy.
+- Install the Gateway API, GAIE CRDs, `agentgateway`, and monitoring as described in the
+  llm-d prerequisite guides.
+- Ensure the `llmd` namespace contains the `llm-d-hf-token` secret.
 
-- **Build your EPP image** from the experimental branch:
+## Install The Predicted-Latency Pool
 
-    ***Prerequisites***
-  - Docker/BuildKit installed
-  - Access to a container registry (e.g., GCP Artifact Registry, Docker Hub, ECR)
+```bash
+helm upgrade --install gaie-predicted-latency \
+  oci://registry.k8s.io/gateway-api-inference-extension/charts/inferencepool \
+  --version v1.4.0 \
+  -n llmd \
+  -f guides/predicted-latency-based-scheduling/values.yaml
 
-    ***Clone & checkout***
+kubectl apply -n llmd -f guides/predicted-latency-based-scheduling/httproute.yaml
+kubectl rollout status deployment/gaie-predicted-latency-epp -n llmd --timeout=300s
+```
 
-    ```bash
-    git clone https://github.com/kubernetes-sigs/gateway-api-inference-extension.git
-    cd gateway-api-inference-extension
-    git checkout slo-prediction-experimental
-    ```
+## Smoke Test
 
-    ***Set your target registry and tag***
+Check the predictor sidecars through the EPP service:
 
-    ```bash
-    export IMG="<your-registry>/epp:slo-prediction-$(git rev-parse --short HEAD)"
-    ```
+```bash
+kubectl run predlat-check --rm -i --restart=Never -n llmd \
+  --image=curlimages/curl:8.12.1 --command -- sh -lc '
+curl -sS http://gaie-predicted-latency-epp:8000/readyz
+curl -sS http://gaie-predicted-latency-epp:8001/readyz
+'
+```
 
-    ***Build the image***
+Check the direct backend baseline:
 
-    ```bash
-    docker build -t "$IMG" -f Dockerfile .
-    ```
+```bash
+kubectl run predlat-direct-smoke --rm -i --restart=Never -n llmd \
+  --image=curlimages/curl:8.12.1 --command -- sh -lc '
+cat <<EOF >/tmp/request.json
+{"model":"Qwen/Qwen3-32B","prompt":"Say hello in one short sentence.","max_tokens":32}
+EOF
+curl -sS --fail-with-body \
+  -H "Content-Type: application/json" \
+  --data @/tmp/request.json \
+  http://ms-kv-events-direct:80/v1/completions
+'
+```
 
-    ***Push the image***
+Check the predicted-latency route through the gateway:
 
-    ```bash
-    docker push "$IMG"
-    ```
+```bash
+GW_IP=$(kubectl get svc infra-kv-events-inference-gateway -n llmd -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
-- **Build your EPP Sidecars** from the same experimental branch as described here:
-  <https://github.com/kubernetes-sigs/gateway-api-inference-extension/tree/slo-prediction-experimental/latencypredictor-v1>
+curl -N --fail-with-body "http://${GW_IP}/v1/completions" \
+  -H 'Content-Type: application/json' \
+  -H 'x-routing-scenario: predicted-latency' \
+  -H 'x-slo-ttft-ms: 5000' \
+  -H 'x-slo-tpot-ms: 100' \
+  -d '{
+    "model": "Qwen/Qwen3-32B",
+    "prompt": "what is the difference between Franz and Apache Kafka?",
+    "max_tokens": 200,
+    "temperature": 0,
+    "stream": true
+  }'
+```
 
----
-
-## Testing Predicted Latency based Scheduling
-
-Once prerequisites are met, you can validate predicted latency based scheduling:
-
-1. **Apply your InferencePool/EPP manifest**
-   - Consult the [example manifest in the gateway-api-inference-extension repository](https://github.com/kubernetes-sigs/gateway-api-inference-extension/blob/slo-prediction-experimental/config/manifests/inferencepool-resources-lp.yaml)
-   - Update the EPP container and sidecar images to the ones you built.
-   - Confirm that the `Deployment` includes the EPP container, training sidecar, and three prediction sidecars, each with their own volumes.
-   - Ensure the `plugins-config` ConfigMap defines both `default` and `slo` profiles.
-
-2. **Check readiness**
-   - Verify pod status: `kubectl get pods` → all containers `Running/Ready`.
-   - Training sidecar health: `curl http://<pod-ip>:8000/readyz`
-   - Prediction sidecar health: `curl http://<pod-ip>:8001/readyz` (and 8002, 8003).
-   - EPP gRPC health: port `9003` (liveness/readiness probes).
-
-3. **Send traffic**
-   - **Baseline:** run requests using the **`default`** profile (no prediction headers).
-   - **SLO-aware:** run requests with the **`slo`** profile and set
-     `x-prediction-based-scheduling: true`, optionally adding SLO headers like `x-slo-ttft-ms` and `x-slo-tpot-ms`.
-
-   Example request:
-
-   ```bash
-   curl -v $GW_IP/v1/completions \
-     -H 'Content-Type: application/json' \
-     -H 'x-prediction-based-scheduling: true' \
-     -H 'x-slo-ttft-ms: 200' \
-     -H 'x-slo-tpot-ms: 50' \
-     -d '{
-       "model": "meta-llama/Llama-3.1-8B-Instruct",
-       "prompt": "what is the difference between Franz and Apache Kafka?",
-       "max_tokens": 200,
-       "temperature": 0,
-       "stream_options": {"include_usage": "true"},
-       "stream": "true"
-     }'
-   ```
-
-   Example response (abridged SSE):
+The final SSE frame should include both actuals and predictions, for example:
 
    ```text
    < HTTP/1.1 200 OK
@@ -147,8 +155,44 @@ Once prerequisites are met, you can validate predicted latency based scheduling:
    - The final SSE frame includes both **predictions and actuals** so you can validate accuracy (e.g., `predicted_ttft_ms` vs `ttft_ms`).
    - TPOTs are sampled every 200th token and surfaced in the arrays like `tpot_observations_ms`.
 
-4. **Validate predictions in logs**
-   Tail EPP logs at verbosity `-v=4`. For each request you should see:
+## Benchmarking
+
+Use [../benchmark/predicted_latency_template.yaml](../benchmark/predicted_latency_template.yaml).
+It covers the three workload classes we validated:
+
+- short prompt / long completion
+- long prompt / short completion
+- mixed workload
+
+Run the backend-only baseline first:
+
+```bash
+export NAMESPACE=llmd
+export BENCHMARK_PVC=<your benchmark pvc>
+export LLMD_ROOT_DIR=../..
+export BENCH_TEMPLATE_DIR="${LLMD_ROOT_DIR}/guides/benchmark"
+export GATEWAY_SVC=ms-kv-events-direct
+export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}/predicted_latency_template.yaml"
+./run_only.sh -c "${BENCHMARK_TEMPLATE}"
+```
+
+Then run the predicted-latency scheduler path with the same template plus request headers:
+
+```bash
+export GATEWAY_SVC=infra-kv-events-inference-gateway
+cp "${BENCH_TEMPLATE_DIR}/predicted_latency_template.yaml" /tmp/predicted-latency-benchmark.yaml
+yq -i '.workload[] .api.headers = {"x-routing-scenario":"predicted-latency","x-slo-ttft-ms":"5000","x-slo-tpot-ms":"100"}' \
+  /tmp/predicted-latency-benchmark.yaml
+./run_only.sh -c /tmp/predicted-latency-benchmark.yaml
+```
+
+For a tighter routing-only comparison, you can also run the same benchmark against the gateway
+without the predicted-latency headers. That isolates default gateway routing versus
+predicted-latency routing on the same backend.
+
+## Validate Predictions In Logs
+
+Tail EPP logs at verbosity `-v=4`. For each request you should see:
 
    - **Profile selection**
 
@@ -187,8 +231,21 @@ Once prerequisites are met, you can validate predicted latency based scheduling:
    - Scores reflect predicted headroom vs SLOs.
    - The final pod was chosen based on SLO scorer output.
 
-5. **Confirm request shedding (optional)**
-   If you send requests with **priority < 0** and no pod can meet both TTFT & TPOT SLOs, logs should show the request being **shed** instead of placed in the negative bucket.
+You should also see the latency-predictor client and model-training path active, for example:
+
+```text
+plugin":"predicted-latency-scorer/predicted-latency-scorer"
+msg":"bulk prediction succeeded"
+msg":"Recording TTFT training data"
+msg":"First inter-token latency observed"
+```
+
+## Historical Note
+
+Older versions of this guide described building custom images from the
+`slo-prediction-experimental` branch of GAIE. That was necessary before the
+released `inferencepool` chart grew built-in latency-predictor support. The current
+validated llm-d path uses the released chart instead.
 
 ---
 

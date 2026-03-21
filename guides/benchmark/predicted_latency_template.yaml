@@ -1,0 +1,152 @@
+endpoint:
+  stack_name: &stack_name predicted-latency-Qwen3-32B
+  model: &model Qwen/Qwen3-32B
+  namespace: &namespace ${NAMESPACE}
+  base_url: &url http://${GATEWAY_SVC}.${NAMESPACE}.svc.cluster.local:80
+  hf_token_secret: llm-d-hf-token
+
+control:
+  work_dir: $HOME/llm-d-bench-work
+  kubectl: kubectl
+
+harness:
+  name: &harness_name inference-perf
+  results_pvc: ${BENCHMARK_PVC}
+  namespace: *namespace
+  parallelism: 1
+  wait_timeout: 3600
+  image: ghcr.io/llm-d/llm-d-benchmark:v0.5.0
+
+env:
+  - name: RAYON_NUM_THREADS
+    value: "4"
+
+workload:
+  short_prompt_long_completion:
+    load:
+      type: constant
+      stages:
+        - rate: 1
+          duration: 30
+        - rate: 2
+          duration: 30
+        - rate: 4
+          duration: 30
+    api:
+      type: completion
+      streaming: true
+    server:
+      type: vllm
+      model_name: *model
+      base_url: *url
+      ignore_eos: true
+    tokenizer:
+      pretrained_model_name_or_path: *model
+    data:
+      type: random
+      input_distribution:
+        min: 32
+        max: 128
+        mean: 64
+        std_dev: 16
+        total_count: 256
+      output_distribution:
+        min: 512
+        max: 1024
+        mean: 768
+        std_dev: 128
+        total_count: 256
+    report:
+      request_lifecycle:
+        summary: true
+        per_stage: true
+        per_request: true
+    storage:
+      local_storage:
+        path: /workspace
+
+  long_prompt_short_completion:
+    load:
+      type: constant
+      stages:
+        - rate: 1
+          duration: 30
+        - rate: 2
+          duration: 30
+        - rate: 4
+          duration: 30
+    api:
+      type: completion
+      streaming: true
+    server:
+      type: vllm
+      model_name: *model
+      base_url: *url
+      ignore_eos: true
+    tokenizer:
+      pretrained_model_name_or_path: *model
+    data:
+      type: random
+      input_distribution:
+        min: 3072
+        max: 6144
+        mean: 4096
+        std_dev: 512
+        total_count: 256
+      output_distribution:
+        min: 64
+        max: 256
+        mean: 128
+        std_dev: 32
+        total_count: 256
+    report:
+      request_lifecycle:
+        summary: true
+        per_stage: true
+        per_request: true
+    storage:
+      local_storage:
+        path: /workspace
+
+  mixed_workload:
+    load:
+      type: constant
+      stages:
+        - rate: 1
+          duration: 30
+        - rate: 2
+          duration: 30
+        - rate: 4
+          duration: 30
+    api:
+      type: completion
+      streaming: true
+    server:
+      type: vllm
+      model_name: *model
+      base_url: *url
+      ignore_eos: true
+    tokenizer:
+      pretrained_model_name_or_path: *model
+    data:
+      type: random
+      input_distribution:
+        min: 32
+        max: 6144
+        mean: 2048
+        std_dev: 1536
+        total_count: 256
+      output_distribution:
+        min: 64
+        max: 1024
+        mean: 384
+        std_dev: 256
+        total_count: 256
+    report:
+      request_lifecycle:
+        summary: true
+        per_stage: true
+        per_request: true
+    storage:
+      local_storage:
+        path: /workspace

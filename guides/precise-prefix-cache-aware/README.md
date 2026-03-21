@@ -103,6 +103,16 @@ kubectl apply -f httproute.yaml -n ${NAMESPACE}
 kubectl apply -f httproute.gke.yaml -n ${NAMESPACE}
 ```
 
+### Optional Local Chart and Image Overrides
+
+If you are validating unpublished `llm-d-infra` or modelserver changes, you can override those inputs at deploy time:
+
+```bash
+export LLMD_INFRA_CHART=/path/to/llm-d-infra/charts/llm-d-infra
+export LLMD_MODELSERVER_IMAGE=docker.io/vllm/vllm-openai:nightly
+helmfile apply -e agentgateway -n ${NAMESPACE}
+```
+
 ## Verify the Installation
 
 - Firstly, you should be able to list all helm releases to view the 3 charts got installed into your chosen namespace:
@@ -201,39 +211,60 @@ You should see output similar to:
 Notice that the second time we called the `/v1/completions` endpoint, the prefix-cache-scorer was able to return a score for the pod,
 indicating that it had cached the KV-blocks from the first call.
 
+### Direct Service Baseline (No Gateway or EPP in the Request Path)
+
+If you want a backend-only baseline, create a `ClusterIP` Service that fronts the decode pods directly and test against that Service instead of the gateway. This leaves the guide deployment intact, but your requests bypass the gateway and scheduler.
+
+```bash
+kubectl apply -n ${NAMESPACE} -f direct-service.yaml
+kubectl get svc ms-kv-events-direct -n ${NAMESPACE}
+kubectl get endpointslice -n ${NAMESPACE} -l kubernetes.io/service-name=ms-kv-events-direct
+```
+
+The direct Service is intentionally narrow and selects only the precise decode pods for the default `Qwen3-32B` deployment. If you run multiple precise installs in the same namespace, copy [direct-service.yaml](./direct-service.yaml) and tighten the selector for your environment.
+
+To smoke test the direct path, port-forward the direct Service:
+
+```bash
+kubectl port-forward -n ${NAMESPACE} svc/ms-kv-events-direct 8000:80
+```
+
+Then send the same `/v1/models`, `/v1/completions`, or `/v1/chat/completions` requests against `http://127.0.0.1:8000`. This path is useful for establishing a backend baseline before reintroducing gateway-based routing into the request path.
+
 ## Benchmarking
 
 To run benchmarks against the installed llm-d stack, you need [run_only.sh](https://github.com/llm-d/llm-d-benchmark/blob/main/existing_stack/run_only.sh), a template file from [guides/benchmark](../benchmark/), and a Persistent Volume Claim (PVC) to store the results. Follow the instructions in the [benchmark doc](../benchmark/README.md).
 
+For a baseline-vs-routed comparison that actually shows the benefit of the precise path, prefer
+[precise_guide_template.yaml](../benchmark/precise_guide_template.yaml) or
+[precise_shared_prefix_template.yaml](../benchmark/precise_shared_prefix_template.yaml). The older
+random template remains useful as a quick sanity check, but it does not intentionally create prefix
+reuse and therefore is a poor fit for demonstrating precise routing gains.
+
 ### Example
 
-This example uses [run_only.sh](https://github.com/llm-d/llm-d-benchmark/blob/main/existing_stack/run_only.sh) with the template [precise_template.yaml](../benchmark/precise_template.yaml).
+This backend-baseline example uses [run_only.sh](https://github.com/llm-d/llm-d-benchmark/blob/main/existing_stack/run_only.sh) with the template [precise_guide_template.yaml](../benchmark/precise_guide_template.yaml).
 
-The benchmark launches a pod (`llmdbench-harness-launcher`) that, in this case, uses `inference-perf` with a shared prefix synthetic workload named `shared_prefix_synthetic`. This workload runs several stages with different rates. The results will be stored on the provided PVC, accessible through the `llmdbench-harness-launcher` pod. Each experiment is saved under the `requests` folder, e.g.,/`requests/inference-perf_<experiment ID>_shared_prefix_precise-guide-<model name>` folder.
+The benchmark launches a pod (`llmdbench-harness-launcher`) that, in this case, uses `inference-perf` with the `shared_prefix` guide workload. The results will be stored on the provided PVC, accessible through the `llmdbench-harness-launcher` pod. Each experiment is saved under the `requests` folder, e.g., `/requests/inference-perf_<experiment ID>_shared_prefix_precise-direct-<model name>`.
 
 Several results files will be created (see [Benchmark doc](../benchmark/README.md)), including a yaml file in a "standard" benchmark report format (see [Benchmark Report](https://github.com/llm-d/llm-d-benchmark/blob/main/docs/benchmark_report.md)).
 
-The `bash` commands below downloads the benchmark runner script (`run_only.sh`), then presents an interactive menu of Precise-Prefix benchmark templates from the llm-d repository's [`guides/benchmark/`](../benchmark/) directory. Once the user selects a template, it downloads that specific YAML configuration file for running benchmarks.
+The `bash` commands below download the benchmark runner script (`run_only.sh`) and the direct-baseline benchmark template used for this guide.
 
   ```bash
   curl -L -O https://raw.githubusercontent.com/llm-d/llm-d-benchmark/main/existing_stack/run_only.sh
   chmod u+x run_only.sh
-  select f in $(
-      curl -s https://api.github.com/repos/llm-d/llm-d/contents/guides/benchmark?ref=main |
-      sed -n '/[[:space:]]*"name":[[:space:]][[:space:]]*"\(precise.*\_template\.yaml\)".*/ s//\1/p'
-    ); do
-    curl -LJO "https://raw.githubusercontent.com/llm-d/llm-d/main/guides/benchmark/$f"
-    break
-  done
+  curl -LJO "https://raw.githubusercontent.com/llm-d/llm-d/main/guides/benchmark/precise_guide_template.yaml"
   ```
 
-Choose the `precise_template.yaml` template, then run:
+Apply the direct Service, then render the template:
 
   ```bash
   export NAMESPACE=llm-d-precise     # replace with your namespace
   export BENCHMARK_PVC=workload-pvc   # replace with your PVC name
-  export GATEWAY_SVC=infra-kv-events-inference-gateway-istio  # replace with your exact service name
-  envsubst < precise_template.yaml > config.yaml
+  kubectl apply -n ${NAMESPACE} -f direct-service.yaml
+  export GATEWAY_SVC=ms-kv-events-direct
+  envsubst < precise_guide_template.yaml > config.yaml
   ```
 
 Edit `config.yaml` if further customization is needed, and then run the command

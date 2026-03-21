@@ -10,6 +10,25 @@ inferenceExtension:
     pullPolicy: Always
   extProcPort: 9002
   pluginsConfigFile: "default-plugins.yaml"
+  pluginsCustomConfig:
+    default-plugins.yaml: |
+      apiVersion: inference.networking.x-k8s.io/v1alpha1
+      kind: EndpointPickerConfig
+      featureGates:
+      - "flowControl"
+      plugins:
+      - type: queue-scorer
+      - type: kv-cache-utilization-scorer
+      - type: prefix-cache-scorer
+      schedulingProfiles:
+      - name: default
+        plugins:
+        - pluginRef: queue-scorer
+          weight: 2
+        - pluginRef: kv-cache-utilization-scorer
+          weight: 2
+        - pluginRef: prefix-cache-scorer
+          weight: 3
   # Distributed tracing configuration (OpenTelemetry)
   tracing:
     enabled: false
@@ -24,7 +43,7 @@ inferenceExtension:
       enabled: true
       auth:
         # To allow unauthenticated /metrics access (e.g., for debugging with curl), set to false
-        enabled: true
+        enabled: false
 inferencePool:
   targetPorts:
     - number: 8000

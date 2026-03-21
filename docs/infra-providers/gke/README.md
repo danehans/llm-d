@@ -3,6 +3,7 @@
 This document covers configuring GKE clusters for running high performance LLM inference with llm-d.
 
 For the current GKE validation state, tested paths, required local overrides, and committed benchmark artifact bundles, see the [GKE validation tracker](./VALIDATION-TRACKER.md).
+For a reproduction-focused handoff package that explains the direct-Service baselines, the routed `agentgateway` + EPP flows, and the comparison datasets, see the [GKE handoff package](./HANDOFF.md).
 
 ## Prerequisites
 

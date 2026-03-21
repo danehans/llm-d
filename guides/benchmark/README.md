@@ -52,9 +52,10 @@ For full, customizable benchmarking, please refer to [llm-d-benchmark](https://g
   export BENCH_TEMPLATE_DIR="${LLMD_ROOT_DIR}"/guides/benchmark
   ```
 
-## Set your stack type and gateway name
+## Set your stack type and endpoint service name
 
-`GATEWAY_SVC` is your gateway service name.
+`GATEWAY_SVC` is the Kubernetes Service name that fronts the benchmark traffic.
+For most guide flows this is the gateway service name. For direct baseline runs, it can instead be a Service that selects the model-serving pods directly.
 `BENCHMARK_TEMPLATE` is a corresponding benchmark template file (available in [guides/benchmark](./)).
 
 > [!IMPORTANT]
@@ -71,9 +72,18 @@ For full, customizable benchmarking, please refer to [llm-d-benchmark](https://g
 >   --no-headers  -o=custom-columns=:metadata.name \
 >   | head -1
 > )
-> export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/inference_scheduling_template.yaml
-> # export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/inference_scheduling_guidellm_template.yaml
-> # export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/inference_scheduling_shared_prefix_template.yaml
+> export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/inference_scheduling_shared_prefix_template.yaml
+> # export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/inference_scheduling_template.yaml           # random sanity/baseline
+> # export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/inference_scheduling_guidellm_template.yaml  # harness smoke test
+> # export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/inference_scheduling_guide_template.yaml     # heavier guide-style run
+>   ```
+>
+> Direct baseline option:
+>
+> ```bash
+> kubectl apply -n "${NAMESPACE}" -f "${LLMD_ROOT_DIR}"/guides/inference-scheduling/direct-service.yaml
+> export GATEWAY_SVC=ms-inference-scheduling-direct
+> export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/inference_scheduling_shared_prefix_template.yaml
 >   ```
 >
 > </details>
@@ -125,6 +135,33 @@ For full, customizable benchmarking, please refer to [llm-d-benchmark](https://g
 > <tr>
 > <td>
 > <details>
+> <summary><b>Predicted Latency Scheduling</b></summary>
+>
+> This is layered on top of the precise guide backend in the current validated flow.
+>
+> Direct baseline option:
+>
+> ```bash
+> kubectl apply -n "${NAMESPACE}" -f "${LLMD_ROOT_DIR}"/guides/precise-prefix-cache-aware/direct-service.yaml
+> export GATEWAY_SVC=ms-kv-events-direct
+> export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/predicted_latency_template.yaml
+> ```
+>
+> Scheduler option:
+>
+> ```bash
+> export GATEWAY_SVC=infra-kv-events-inference-gateway
+> export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/predicted_latency_template.yaml
+> cp "${BENCHMARK_TEMPLATE}" /tmp/predicted-latency-benchmark.yaml
+> yq -i '.workload[] .api.headers = {"x-routing-scenario":"predicted-latency","x-slo-ttft-ms":"5000","x-slo-tpot-ms":"100"}' \
+>   /tmp/predicted-latency-benchmark.yaml
+> export BENCHMARK_TEMPLATE=/tmp/predicted-latency-benchmark.yaml
+> ```
+>
+> </details>
+> </td>
+> <td>
+> <details>
 > <summary><b>Precise Prefix Caching</b></summary>
 >
 > ```bash
@@ -133,9 +170,18 @@ For full, customizable benchmarking, please refer to [llm-d-benchmark](https://g
 >   --no-headers  -o=custom-columns=:metadata.name \
 >   | head -1
 > )
-> export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/precise_template.yaml
-> # export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/precise_guidellm_template.yaml
+> export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/precise_guide_template.yaml
 > # export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/precise_shared_prefix_template.yaml
+> # export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/precise_template.yaml          # random sanity/baseline
+> # export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/precise_guidellm_template.yaml # harness smoke test
+>   ```
+>
+> Direct baseline option:
+>
+> ```bash
+> kubectl apply -n "${NAMESPACE}" -f "${LLMD_ROOT_DIR}"/guides/precise-prefix-cache-aware/direct-service.yaml
+> export GATEWAY_SVC=ms-kv-events-direct
+> export BENCHMARK_TEMPLATE="${BENCH_TEMPLATE_DIR}"/precise_guide_template.yaml
 >   ```
 >
 > </details>
@@ -201,6 +247,37 @@ To copy a results directory to your local machine use:
   ```bash
   kubectl cp ${NAMESPACE}/${HARNESS_POD}:/requests/<results-folder> <destination-path>
   ```
+
+## Building Comparison Charts
+
+When comparing a direct-Service baseline with a routed gateway/EPP path, keep more than the raw
+benchmark bundle:
+
+- preserve the rendered `config.yaml`
+- preserve the per-stage `stage_*_lifecycle_metrics.json` files
+- preserve `benchmark_report_v0.2,_stage_*.yaml` files when emitted
+- capture decode-pod logs during the benchmark window
+- capture EPP logs for routed runs
+
+The benchmark bundle does **not** contain prefix-cache hit percentages. That metric must be derived
+from the decode-pod logs captured during the run.
+
+The chart metrics used in the GKE handoff package map back to the raw benchmark data as follows:
+
+| Chart metric | Raw source |
+| --- | --- |
+| `Prefix Cache Hit Percent` | decode-pod logs captured during the benchmark window |
+| `ntpot p90 (ms)` | `successes.latency.normalized_time_per_output_token.p90` or the equivalent field in `benchmark_report_v0.2` |
+| `output_tokens_per_sec` | `successes.throughput.output_tokens_per_sec` or `throughput.output_token_rate.mean` in `benchmark_report_v0.2` |
+| `ttft p90 (ms)` | `successes.latency.time_to_first_token.p90` or the equivalent field in `benchmark_report_v0.2` |
+| `itl p90 (ms)` | `successes.latency.inter_token_latency.p90` or the equivalent field in `benchmark_report_v0.2` |
+| `average_input_tokens` | `successes.prompt_len.mean` or `requests.input_length.mean` in `benchmark_report_v0.2` |
+| `average_output_tokens` | `successes.output_len.mean` or `requests.output_length.mean` in `benchmark_report_v0.2` |
+
+For the GKE-specific comparison package, see:
+
+- [GKE validation tracker](../../docs/infra-providers/gke/VALIDATION-TRACKER.md)
+- [GKE handoff package](../../docs/infra-providers/gke/HANDOFF.md)
 
 ## Results Examples
 
@@ -671,6 +748,10 @@ In this example there are 6 workload stages. For each of these stages, there is 
 </details>
 <details>
 
+The per-request lifecycle file can be very large. For normal git history, keep it local and commit
+only derived reports, CSV summaries, or curated evidence files unless you have explicitly reduced
+the raw artifact size.
+
 <summary><b><i>Click</i></b> for sample contents of the overall summary file (<code>summary_lifecycle_metrics.json</code>)</summary>
 
   ```json
@@ -849,14 +930,14 @@ The configuration is divided into sections, each with a different scope.
 
 ### Endpoint
 
-These are the properties of the stack (`envsubst` would replace `NAMESPACE` and `GATEWAY_SVC` to match your env). Gated models need a Hugging Face token to access. Your stack should already have a token secret under the name `llm-d-hf-token`. `stack_name` is a user-defined arbitrary name that will be attached to the benchmark results. You can use `stack_name` to help you identify the results of different experiments. The `model` must match your stack. Please note the `yaml` tags -- other section of this `yaml` reference them (e.g., the tokenizer reference the model).
+These are the properties of the stack (`envsubst` would replace `NAMESPACE` and `GATEWAY_SVC` to match your env). `GATEWAY_SVC` is historical naming; it can point either to a gateway service or to a direct ClusterIP Service used for baseline tests. Gated models need a Hugging Face token to access. Your stack should already have a token secret under the name `llm-d-hf-token`. `stack_name` is a user-defined arbitrary name that will be attached to the benchmark results. You can use `stack_name` to help you identify the results of different experiments. The `model` must match your stack. Please note the `yaml` tags -- other section of this `yaml` reference them (e.g., the tokenizer reference the model).
 
   ```yaml
   endpoint:
     stack_name: &stack_name inference-scheduling-Qwen3-32B  # user defined name for the stack (results prefix)
     model: &model Qwen/Qwen3-32B                      # Exact HuggingFace model name. Must match stack deployed.
     namespace: &namespace $NAMESPACE
-    base_url: &url http://${GATEWAY_SVC}.${NAMESPACE}.svc.cluster.local:80  # Base URL of inference endpoint
+    base_url: &url http://${GATEWAY_SVC}.${NAMESPACE}.svc.cluster.local:80  # Base URL of inference endpoint (gateway or direct Service)
     hf_token_secret: llm-d-hf-token   # The name of secret that contains the HF token of the stack
   ```
 
