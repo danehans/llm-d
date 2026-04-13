@@ -36,7 +36,7 @@ For full, customizable benchmarking, please refer to [llm-d-benchmark](https://g
       resources:
         requests:
           storage: 200Gi
-      # storageClassName: <change the default storage class if needed>
+        storageClassName: standard
     YAML
     ```
 
